@@ -11,10 +11,12 @@
   "dependencies": {
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "mongoose": "^8.18.3",
-    "cors": "^2.8.5",
+    "@google/genai": "0.20.0",
     "dotenv": "^17.2.3",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "cors": "^2.8.5",
+    "mongoose": "^8.19.2",
+    "@supabase/supabase-js": "2.44.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

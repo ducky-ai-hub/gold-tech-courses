@@ -1,4 +1,3 @@
-
 import Course from '../models/courseModel.js';
 
 // @desc    Fetch all courses

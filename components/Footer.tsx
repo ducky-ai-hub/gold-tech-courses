@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { useRouter } from '../App';
 
 const CodeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -10,12 +11,19 @@ const CodeIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
 
 
 const Footer: React.FC = () => {
+  const { navigate } = useRouter();
+
+  const handleLogoClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    navigate('#/');
+  };
+
   return (
     <footer className="border-t border-slate-800">
       <div className="container mx-auto px-6 py-12">
         <div className="md:flex md:justify-between">
           <div className="mb-6 md:mb-0">
-            <a href="#/" className="flex items-center gap-2 text-xl font-bold text-white">
+            <a href="#/" onClick={handleLogoClick} className="flex items-center gap-2 text-xl font-bold text-white">
               <CodeIcon className="w-8 h-8 text-amber-400" />
               <span>TechGold</span>
             </a>

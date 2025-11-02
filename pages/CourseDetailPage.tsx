@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import type { Course, Module, RegistrationInfo } from '../types';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import RegistrationModal from '../components/RegistrationModal';
-import { useCourses } from '../App';
+import { useRouter, useCourses } from '../App';
 
 // --- Icons ---
 const StarIcon: React.FC<{ className: string }> = ({ className }) => (
@@ -121,18 +120,19 @@ const CoursePurchaseCard: React.FC<{ course: Course }> = ({ course }) => {
     const isFree = course.price === 'Miễn phí';
 
     const handleFormSubmit = async (data: RegistrationInfo) => {
-        // Simulate API call to backend
-        console.log("Submitting registration to backend:", {
+        // This function is passed to the modal.
+        // The modal handles the submitting state.
+        console.log("Submitting registration info:", {
             courseId: course.id,
             courseTitle: course.title,
             userInfo: data,
         });
 
-        // Fake network delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // After form submission, we call the async enrollInCourse function.
+        // The modal's loading spinner will continue until this promise resolves.
+        await enrollInCourse(course.id);
 
-        // On successful submission, update global state and close modal
-        enrollInCourse(course.id);
+        // On successful submission, close modal
         setIsModalOpen(false);
         console.log("Enrollment successful!");
     };
@@ -214,8 +214,14 @@ const CoursePurchaseCard: React.FC<{ course: Course }> = ({ course }) => {
 
 // --- Main Page Component ---
 const CourseDetailPage: React.FC<{ courseId: number }> = ({ courseId }) => {
+  const { navigate } = useRouter();
   const { courses } = useCourses();
   const course = courses.find((c) => c.id === courseId);
+
+  const handleBackClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    navigate('#/');
+  };
 
   if (!course) {
     return (
@@ -225,7 +231,7 @@ const CourseDetailPage: React.FC<{ courseId: number }> = ({ courseId }) => {
           <div>
             <h1 className="text-4xl font-bold text-white">404 - Không Tìm Thấy Khóa Học</h1>
             <p className="mt-4 text-slate-300">Khóa học bạn đang tìm kiếm không tồn tại hoặc đã bị xóa.</p>
-            <a href="#/" className="mt-8 inline-block bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold py-3 px-6 rounded-lg">
+            <a href="#/" onClick={handleBackClick} className="mt-8 inline-block bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold py-3 px-6 rounded-lg">
                 Về Trang Chủ
             </a>
           </div>
@@ -242,7 +248,7 @@ const CourseDetailPage: React.FC<{ courseId: number }> = ({ courseId }) => {
         {/* Hero Section */}
         <div className="bg-slate-900">
             <div className="container mx-auto px-6 py-12 md:py-16">
-                <a href="#/" className="text-amber-400 hover:text-amber-300 mb-6 inline-block">&larr; Quay lại tất cả khóa học</a>
+                <a href="#/" onClick={handleBackClick} className="text-amber-400 hover:text-amber-300 mb-6 inline-block">&larr; Quay lại tất cả khóa học</a>
                 <h1 className="text-4xl md:text-5xl font-extrabold text-white leading-tight">{course.title}</h1>
                 <p className="mt-4 text-lg text-slate-300 max-w-3xl">{course.shortDescription}</p>
                 <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2">

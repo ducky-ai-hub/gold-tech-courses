@@ -1,4 +1,3 @@
-
 export interface Instructor {
   name: string;
   title: string;
@@ -35,6 +34,29 @@ export interface Course {
   isEnrolled: boolean;
   status: 'available' | 'upcoming';
 }
+
+// NEW TYPE: This represents the data structure in the Supabase `courses` table (snake_case)
+export interface CourseFromSupabase {
+  id: number;
+  title: string;
+  instructor: string;
+  instructor_details: Instructor;
+  price: string;
+  original_price?: string | null;
+  promotion_deal?: string | null;
+  image_url: string;
+  rating: number;
+  short_description: string;
+  long_description: string;
+  learning_objectives: string[];
+  modules: Module[];
+  duration: string;
+  skill_level: 'Beginner' | 'Intermediate' | 'Advanced';
+  is_enrolled: boolean;
+  status: 'available' | 'upcoming';
+  created_at: string;
+}
+
 
 export interface Testimonial {
   id: number;

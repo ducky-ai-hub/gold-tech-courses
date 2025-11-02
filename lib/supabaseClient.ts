@@ -26,13 +26,13 @@ export type Database = {
 };
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_KEY;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 const initializeSupabase = () => {
   if (supabaseUrl && supabaseKey) {
     return createClient<Database>(supabaseUrl, supabaseKey);
   }
-  console.warn('Supabase environment variables (SUPABASE_URL, SUPABASE_KEY) not set. The application will use static data, and database features will be disabled.');
+  console.warn('Supabase environment variables (SUPABASE_URL, SUPABASE_ANON_KEY) not set. The application will use static data, and database features will be disabled.');
   return null;
 };
 

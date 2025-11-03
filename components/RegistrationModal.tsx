@@ -46,7 +46,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const widgetContainerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+  const turnstileSiteKey = '1x00000000000000000000AA';//import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

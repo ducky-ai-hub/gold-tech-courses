@@ -201,7 +201,10 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
 
           {turnstileSiteKey ? (
             <div className="pt-2">
-              <div ref={widgetContainerRef} className="cf-turnstile" />
+              <div
+                ref={widgetContainerRef}
+                className="flex min-h-[65px] items-center justify-center"
+              />
             </div>
           ) : (
             <p className="text-sm text-amber-400 pt-2">

@@ -75,4 +75,5 @@ export interface RegistrationInfo {
   fullName: string;
   email: string;
   phone: string;
+  turnstileToken?: string;
 }

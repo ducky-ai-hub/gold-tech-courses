@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { RegistrationInfo } from '../types';
 
 interface RegistrationModalProps {
@@ -15,13 +15,38 @@ const XMarkIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
+type TurnstileRenderOptions = {
+  sitekey: string;
+  callback?: (token: string) => void;
+  'error-callback'?: () => void;
+  'timeout-callback'?: () => void;
+  'expired-callback'?: () => void;
+};
+
+interface TurnstileInstance {
+  render: (container: HTMLElement, options: TurnstileRenderOptions) => string;
+  reset: (widgetId?: string) => void;
+  remove: (widgetId?: string) => void;
+}
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileInstance;
+  }
+}
+
 const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOpen, onClose, onSubmit }) => {
   const [formData, setFormData] = useState<RegistrationInfo>({
     fullName: '',
     email: '',
     phone: '',
   });
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const widgetContainerRef = useRef<HTMLDivElement | null>(null);
+  const widgetIdRef = useRef<string | null>(null);
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -30,9 +55,23 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setFormError(null);
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      if (turnstileSiteKey && !turnstileToken) {
+        setFormError('Vui lòng xác minh bạn không phải robot.');
+        return;
+      }
+
+      await onSubmit({
+        ...formData,
+        turnstileToken: turnstileToken || undefined,
+      });
+
+      if (widgetIdRef.current) {
+        window.turnstile?.reset(widgetIdRef.current);
+      }
+      setTurnstileToken('');
     } catch (error) {
       console.error("Submission failed", error);
       // Here you could show an error message to the user
@@ -40,6 +79,68 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
       setIsSubmitting(false);
     }
   };
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const scriptId = 'cf-turnstile-script';
+    if (!document.getElementById(scriptId) && turnstileSiteKey) {
+      const script = document.createElement('script');
+      script.id = scriptId;
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+      script.async = true;
+      script.defer = true;
+      script.setAttribute('data-cfasync', 'false');
+      document.body.appendChild(script);
+    }
+  }, [isOpen, turnstileSiteKey]);
+
+  useEffect(() => {
+    if (!isOpen || !turnstileSiteKey) {
+      return;
+    }
+
+    const renderWidget = () => {
+      if (!widgetContainerRef.current || !window.turnstile) {
+        return;
+      }
+      if (widgetIdRef.current) {
+        window.turnstile.remove(widgetIdRef.current);
+      }
+      widgetIdRef.current = window.turnstile.render(widgetContainerRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token) => {
+          setTurnstileToken(token);
+          setFormError(null);
+        },
+        'error-callback': () => setTurnstileToken(''),
+        'timeout-callback': () => setTurnstileToken(''),
+        'expired-callback': () => setTurnstileToken(''),
+      });
+    };
+
+    const handleTurnstileLoaded = () => {
+      window.removeEventListener('turnstile-loaded', handleTurnstileLoaded);
+      renderWidget();
+    };
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      window.addEventListener('turnstile-loaded', handleTurnstileLoaded);
+    }
+
+    return () => {
+      window.removeEventListener('turnstile-loaded', handleTurnstileLoaded);
+      if (widgetIdRef.current && window.turnstile) {
+        window.turnstile.remove(widgetIdRef.current);
+        widgetIdRef.current = null;
+      }
+      setTurnstileToken('');
+    };
+  }, [isOpen, turnstileSiteKey]);
   
   if (!isOpen) {
     return null;
@@ -98,10 +199,24 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
             />
           </div>
 
+          {turnstileSiteKey ? (
+            <div className="pt-2">
+              <div ref={widgetContainerRef} className="cf-turnstile" />
+            </div>
+          ) : (
+            <p className="text-sm text-amber-400 pt-2">
+              Thiếu cấu hình Turnstile. Vui lòng thêm biến môi trường `VITE_TURNSTILE_SITE_KEY`.
+            </p>
+          )}
+
+          {formError && (
+            <p className="text-sm text-red-400">{formError}</p>
+          )}
+
           <div className="pt-4">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (Boolean(turnstileSiteKey) && !turnstileToken)}
               className="w-full text-center flex justify-center bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold py-3 px-8 rounded-lg transition-all duration-300 ease-in-out transform hover:scale-105 disabled:bg-amber-400/50 disabled:cursor-not-allowed disabled:scale-100"
             >
               {isSubmitting ? 'Đang xử lý...' : 'Xác nhận đăng ký'}

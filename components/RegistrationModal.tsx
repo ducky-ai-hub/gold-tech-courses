@@ -32,6 +32,7 @@ interface TurnstileInstance {
 declare global {
   interface Window {
     turnstile?: TurnstileInstance;
+    onloadTurnstileCallback?: () => void;
   }
 }
 
@@ -46,7 +47,10 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
   const [isSubmitting, setIsSubmitting] = useState(false);
   const widgetContainerRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const turnstileSiteKey = '1x00000000000000000000AA';//import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
+  const rawTurnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY;
+  const turnstileSiteKey = typeof rawTurnstileSiteKey === 'string' && rawTurnstileSiteKey.trim() !== ''
+    ? rawTurnstileSiteKey
+    : undefined;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -81,29 +85,14 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
   };
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const scriptId = 'cf-turnstile-script';
-    if (!document.getElementById(scriptId) && turnstileSiteKey) {
-      const script = document.createElement('script');
-      script.id = scriptId;
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-      script.async = true;
-      script.defer = true;
-      script.setAttribute('data-cfasync', 'false');
-      document.body.appendChild(script);
-    }
-  }, [isOpen, turnstileSiteKey]);
-
-  useEffect(() => {
     if (!isOpen || !turnstileSiteKey) {
       return;
     }
 
+    let isActive = true;
+
     const renderWidget = () => {
-      if (!widgetContainerRef.current || !window.turnstile) {
+      if (!isActive || !widgetContainerRef.current || !window.turnstile) {
         return;
       }
       if (widgetIdRef.current) {
@@ -112,28 +101,64 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
       widgetIdRef.current = window.turnstile.render(widgetContainerRef.current, {
         sitekey: turnstileSiteKey,
         callback: (token) => {
+          if (!isActive) {
+            return;
+          }
           setTurnstileToken(token);
           setFormError(null);
         },
-        'error-callback': () => setTurnstileToken(''),
-        'timeout-callback': () => setTurnstileToken(''),
-        'expired-callback': () => setTurnstileToken(''),
+        'error-callback': () => {
+          if (!isActive) {
+            return;
+          }
+          setTurnstileToken('');
+        },
+        'timeout-callback': () => {
+          if (!isActive) {
+            return;
+          }
+          setTurnstileToken('');
+        },
+        'expired-callback': () => {
+          if (!isActive) {
+            return;
+          }
+          setTurnstileToken('');
+        },
       });
     };
 
-    const handleTurnstileLoaded = () => {
-      window.removeEventListener('turnstile-loaded', handleTurnstileLoaded);
+    const handleScriptLoad = () => {
       renderWidget();
     };
 
-    if (window.turnstile) {
-      renderWidget();
+    window.onloadTurnstileCallback = renderWidget;
+
+    const scriptId = 'cf-turnstile-script';
+    let scriptElement = document.getElementById(scriptId) as HTMLScriptElement | null;
+
+    if (!scriptElement) {
+      scriptElement = document.createElement('script');
+      scriptElement.id = scriptId;
+      scriptElement.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+      scriptElement.async = true;
+      scriptElement.defer = true;
+      scriptElement.setAttribute('data-cfasync', 'false');
+      scriptElement.addEventListener('load', handleScriptLoad);
+      document.body.appendChild(scriptElement);
     } else {
-      window.addEventListener('turnstile-loaded', handleTurnstileLoaded);
+      scriptElement.addEventListener('load', handleScriptLoad);
+      if (window.turnstile) {
+        renderWidget();
+      }
     }
 
     return () => {
-      window.removeEventListener('turnstile-loaded', handleTurnstileLoaded);
+      isActive = false;
+      scriptElement?.removeEventListener('load', handleScriptLoad);
+      if (window.onloadTurnstileCallback === renderWidget) {
+        window.onloadTurnstileCallback = undefined;
+      }
       if (widgetIdRef.current && window.turnstile) {
         window.turnstile.remove(widgetIdRef.current);
         widgetIdRef.current = null;

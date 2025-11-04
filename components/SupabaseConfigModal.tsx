@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '../lib/supabaseClient';
+// FIX: Update import path for Database type to resolve Supabase client type inference issues.
+import type { Database } from '../types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 interface SupabaseConfigModalProps {

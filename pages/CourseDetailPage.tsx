@@ -3,7 +3,8 @@ import type { Course, Module, RegistrationInfo } from '../types';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import RegistrationModal from '../components/RegistrationModal';
-import { useRouter, useCourses } from '../App';
+import { useRouter } from '../contexts/RouterContext';
+import { useCourses } from '../contexts/CourseContext';
 
 // --- Icons ---
 const StarIcon: React.FC<{ className: string }> = ({ className }) => (
@@ -58,6 +59,7 @@ const WhatYouWillLearn: React.FC<{ objectives: string[] }> = ({ objectives }) =>
 const CourseContentModule: React.FC<{ module: Module, index: number, openIndex: number | null, setOpenIndex: (index: number | null) => void }> = ({ module, index, openIndex, setOpenIndex }) => {
     const isOpen = index === openIndex;
     const toggleOpen = () => setOpenIndex(isOpen ? null : index);
+
     
     return (
         <div className="border-b border-slate-800 last:border-b-0">
@@ -114,27 +116,25 @@ const InstructorProfile: React.FC<{ course: Course }> = ({ course }) => (
 );
 
 const CoursePurchaseCard: React.FC<{ course: Course }> = ({ course }) => {
-    const { enrollInCourse } = useCourses();
+    const { registerForCourse } = useCourses();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [registrationError, setRegistrationError] = useState<string | null>(null);
+
     const isUpcoming = course.status === 'upcoming';
     const isFree = course.price === 'Miễn phí';
 
     const handleFormSubmit = async (data: RegistrationInfo) => {
-        // This function is passed to the modal.
-        // The modal handles the submitting state.
-        console.log("Submitting registration info:", {
-            courseId: course.id,
-            courseTitle: course.title,
-            userInfo: data,
-        });
-
-        // After form submission, we call the async enrollInCourse function.
-        // The modal's loading spinner will continue until this promise resolves.
-        await enrollInCourse(course.id);
-
-        // On successful submission, close modal
-        setIsModalOpen(false);
-        console.log("Enrollment successful!");
+        setRegistrationError(null); // Clear previous errors
+        try {
+            await registerForCourse(data, course.id);
+            setIsModalOpen(false); // Close modal on success
+            console.log("Registration successful!");
+        } catch (error: any) {
+            console.error("Registration failed in component:", error);
+            setRegistrationError(error.message);
+            // Re-throw to prevent modal from closing if onSubmit has its own finally block
+            throw error;
+        }
     };
     
     const renderPrice = () => {
@@ -180,8 +180,12 @@ const CoursePurchaseCard: React.FC<{ course: Course }> = ({ course }) => {
         <RegistrationModal
             courseTitle={course.title}
             isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
+            onClose={() => {
+              setIsModalOpen(false);
+              setRegistrationError(null); // Clear error when closing modal
+            }}
             onSubmit={handleFormSubmit}
+            error={registrationError}
         />
         <div className="sticky top-28">
             <div className="border border-slate-800 rounded-2xl bg-slate-900 overflow-hidden">

@@ -1,13 +1,11 @@
-
 import React from 'react';
 import CourseCard from './CourseCard';
 import type { Course } from '../types';
+import { useCourses } from '../contexts/CourseContext';
 
-interface CourseListProps {
-  courses: Course[];
-}
-
-const CourseList: React.FC<CourseListProps> = ({ courses }) => {
+const CourseList: React.FC = () => {
+  const { courses } = useCourses();
+  
   return (
     <section id="courses" className="py-20 sm:py-24 bg-gray-950/70">
       <div className="container mx-auto px-6">

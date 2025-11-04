@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Course } from '../types';
-import { useRouter } from '../App';
+import { useRouter } from '../contexts/RouterContext';
 
 interface CourseCardProps {
   course: Course;

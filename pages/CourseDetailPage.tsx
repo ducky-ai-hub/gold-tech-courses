@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { Course, Module, RegistrationInfo } from '../types';
+import type { Course, Module, RegistrationSubmission } from '../types';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import RegistrationModal from '../components/RegistrationModal';
@@ -123,7 +123,7 @@ const CoursePurchaseCard: React.FC<{ course: Course }> = ({ course }) => {
     const isUpcoming = course.status === 'upcoming';
     const isFree = course.price === 'Miễn phí';
 
-    const handleFormSubmit = async (data: RegistrationInfo) => {
+    const handleFormSubmit = async (data: RegistrationSubmission) => {
         setRegistrationError(null); // Clear previous errors
         try {
             await registerForCourse(data, course.id);

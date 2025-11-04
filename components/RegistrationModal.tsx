@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import type { RegistrationInfo } from '../types';
+import type { RegistrationInfo, RegistrationSubmission } from '../types';
 
 // --- Environment Flag ---
 // This flag determines whether to use the real Cloudflare Turnstile service
@@ -28,7 +28,7 @@ interface RegistrationModalProps {
   courseTitle: string;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: RegistrationInfo) => Promise<void>;
+  onSubmit: (data: RegistrationSubmission) => Promise<void>;
   error?: string | null;
 }
 
@@ -90,6 +90,7 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
           const widgetId = window.turnstile.render(turnstileContainerRef.current, {
             sitekey: turnstileSiteKey,
             callback: (token: string) => {
+              console.log(token);
               setTurnstileToken(token);
               setFormError(null);
             },
@@ -159,7 +160,10 @@ const RegistrationModal: React.FC<RegistrationModalProps> = ({ courseTitle, isOp
     
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      await onSubmit({
+        ...formData,
+        turnstileToken,
+      });
     } catch (err) {
       // Error is set by the parent via props, but we reset Turnstile for a new attempt.
       if (isProduction) {

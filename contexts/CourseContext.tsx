@@ -1,9 +1,19 @@
 import React, { useState, createContext, useContext, useEffect, ReactNode } from 'react';
-import type { Course, CourseFromSupabase, RegistrationInfo, Database } from '../types';
+import type { Course, CourseFromSupabase, RegistrationSubmission, Database } from '../types';
 import { supabase as supabaseFromFile } from '../lib/supabaseClient';
 import { courses as staticCourses } from '../data/courses';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import SupabaseConfigModal from '../components/SupabaseConfigModal';
+
+const COURSE_REG_EDGE_FUNCTION_URL = 'https://lxqpasgwibfjxteqjoku.supabase.co/functions/v1/course_reg';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const generateIdemKey = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
 
 // Helper function to map data from Supabase (snake_case) to frontend (camelCase)
 const mapSupabaseCourseToCourse = (dbCourse: CourseFromSupabase): Course => {
@@ -36,7 +46,7 @@ interface CourseContextType {
   error: string | null;
   showConfigModal: boolean;
   enrollInCourse: (id: number) => Promise<void>;
-  registerForCourse: (info: RegistrationInfo, courseId: number) => Promise<void>;
+  registerForCourse: (info: RegistrationSubmission, courseId: number) => Promise<void>;
   changeConnection: () => void;
 }
 
@@ -123,26 +133,37 @@ export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
   };
 
-  const registerForCourse = async (info: RegistrationInfo, courseId: number) => {
-    if (!supabaseClient) {
-        throw new Error("Database connection not configured.");
-    }
+  const registerForCourse = async (info: RegistrationSubmission, courseId: number) => {
     try {
-        const { error } = await supabaseClient
-            .from('registrations')
-            .insert({
-                course_id: courseId,
-                email: info.email,
-                full_name: info.fullName,
-                phone: info.phone
-            });
-        
-        if (error) {
-            if (error.code === '23505') {
-                throw new Error('Bạn đã đăng ký khóa học này với email này rồi.');
+        const response = await fetch(COURSE_REG_EDGE_FUNCTION_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(SUPABASE_ANON_KEY ? { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } : {}),
+          },
+          body: JSON.stringify({
+            course_id: courseId,
+            email: info.email,
+            full_name: info.fullName,
+            phone: info.phone,
+            captchaToken: info.turnstileToken,
+            idemKey: generateIdemKey(),
+          }),
+        });
+
+        if (!response.ok) {
+          let message = 'Không thể hoàn tất đăng ký. Vui lòng thử lại.';
+          try {
+            const errorBody = await response.json();
+            if (errorBody?.message) {
+              message = errorBody.message;
             }
-            throw error;
+          } catch {
+            // ignore parsing issues; fall back to generic message
+          }
+          throw new Error(message);
         }
+
         await enrollInCourse(courseId);
     } catch (err: any) {
         console.error("Failed to register:", err);

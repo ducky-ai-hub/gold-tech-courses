@@ -125,6 +125,10 @@ export type RegistrationInfo = {
   phone: string;
 };
 
+export type RegistrationSubmission = RegistrationInfo & {
+  turnstileToken: string;
+};
+
 // For the new registrations table
 // FIX: Changed from interface to type alias to fix Supabase client type inference issues.
 export type RegistrationFromSupabase = {
